@@ -1,0 +1,32 @@
+#ifndef PASS2_HPP
+#define PASS2_HPP
+
+#include <string>
+#include <fstream>
+#include <map>
+#include "symtab.hpp"
+#include "optab.hpp"
+#include "listing.hpp"
+
+class Pass2 {
+public:
+    Pass2(SymbolTable& symtab, OpTable& optab, ListingGenerator& listing);
+    
+    bool process(const std::string& inputFile, int startAddress, int programLength);
+    
+private:
+    SymbolTable& symtab;
+    OpTable& optab;
+    ListingGenerator& listing;
+    std::map<std::string, int> literalTable; // Maps literal string to address
+    
+    bool parseLine(const std::string& line, std::string& label,
+                   std::string& opcode, std::string& operand);
+    std::string generateObjectCode(const std::string& opcode,
+                                   const std::string& operand, int locctr);
+    void processLiteralPool(int& locctr);
+    std::string generateLiteralValue(const std::string& literal);
+};
+
+#endif // PASS2_HPP
+
