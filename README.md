@@ -2,6 +2,8 @@
 
 A two-pass assembler for the SIC/XE (Simplified Instructional Computer / Extended Edition) architecture.
 
+yes
+
 ## Building
 
 ```bash
