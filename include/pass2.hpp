@@ -16,7 +16,8 @@
 #include "optab.hpp"
 #include "listing.hpp"
 
-// Second pass: generates object code and listing file
+// second pass: generates object code and listing file
+// uses symbol table from pass1 to resolve addresses
 class Pass2 {
 public:
     Pass2(SymbolTable& symtab, OpTable& optab, ListingGenerator& listing);
@@ -28,7 +29,7 @@ private:
     SymbolTable& symtab;
     OpTable& optab;
     ListingGenerator& listing;
-    std::map<std::string, int> literalTable; // Maps literal string to address
+    std::map<std::string, int> literalTable; // maps literal string to address
     
     bool parseLine(const std::string& line, std::string& label,
                    std::string& opcode, std::string& operand);

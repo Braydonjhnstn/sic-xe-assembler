@@ -14,7 +14,8 @@
 #include <fstream>
 #include <vector>
 
-// Generates listing file with addresses, object code, and source lines
+// generates listing file with addresses, object code, and source lines
+// handles formatting and file I/O for the .l output file
 class ListingGenerator {
 public:
     ListingGenerator();

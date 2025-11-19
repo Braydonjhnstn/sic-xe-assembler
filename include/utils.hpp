@@ -12,7 +12,8 @@
 #include <string>
 #include <vector>
 
-// Utility functions for string manipulation and number conversion
+// utility functions for string manipulation and number conversion
+// used throughout the assembler for parsing and formatting
 namespace utils {
     std::string trim(const std::string& str);
     std::vector<std::string> split(const std::string& str, char delimiter);

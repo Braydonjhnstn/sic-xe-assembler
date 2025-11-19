@@ -15,7 +15,8 @@
 #include "optab.hpp"
 #include "listing.hpp"
 
-// Main orchestrator for SIC/XE two-pass assembler
+// main orchestrator for SIC/XE two-pass assembler
+// coordinates pass1 and pass2, manages symbol table and listing output
 class Assembler {
 public:
     Assembler();

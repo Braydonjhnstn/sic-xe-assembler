@@ -14,7 +14,8 @@
 #include "symtab.hpp"
 #include "optab.hpp"
 
-// First pass: builds symbol table and calculates program length
+// first pass: builds symbol table and calculates program length
+// doesnt generate object code, just tracks addresses and builds symtab
 class Pass1 {
 public:
     Pass1(SymbolTable& symtab, OpTable& optab);

@@ -13,7 +13,8 @@
 #include <unordered_map>
 #include <vector>
 
-// Structure for literal pool entries
+// structure for literal pool entries
+// stores info about literals for the symbol table output
 struct Literal {
     std::string name;
     std::string operand;
@@ -21,7 +22,8 @@ struct Literal {
     int length;
 };
 
-// Symbol table for storing labels and addresses
+// symbol table for storing labels and addresses
+// built in pass1, used in pass2 to resolve symbol references
 class SymbolTable {
 public:
     SymbolTable();
