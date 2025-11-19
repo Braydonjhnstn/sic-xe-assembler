@@ -1,3 +1,8 @@
+//
+// Name: Braydon Johnston REDid: 131049942
+// Name: Reinaldo Roldan  REDid: 825760540
+//
+
 #include "symtab.hpp"
 #include <fstream>
 #include <iomanip>
