@@ -30,7 +30,7 @@ bool Pass2::process(const std::string& inputFile, int startAddress, int programL
         return false;
     }
     
-    // Generate listing file with .l extension
+    // generate listing file with .l extension
     std::string listingFile = inputFile;
     size_t pos = listingFile.find_last_of('.');
     if (pos != std::string::npos) {
@@ -62,55 +62,51 @@ bool Pass2::process(const std::string& inputFile, int startAddress, int programL
         
         if (firstLine && opcode == "START") {
             programName = label.empty() ? "PROG" : label;
-            // Write START line with address
+            // write START line with address
             listing.writeLine(startAddress, "", originalLine);
             firstLine = false;
             continue;
         }
         
         if (opcode == "END") {
-            // Write END line with no address
+            // write END line with no address
             listing.writeLine(-1, "", originalLine); // -1 means no address
-            // Don't break - continue processing other control sections
+            // dont break - continue processing other control sections
             continue;
         }
         
-        // Check for directives that need special handling before normal processing
+        // check for directives that need special handling before normal processing
         bool extendedFormat = (opcode[0] == '+');
         std::string baseOpcode = extendedFormat ? opcode.substr(1) : opcode;
         
         if (baseOpcode == "CSECT") {
-            // Process any remaining literals from previous section before starting new one
+            // process any remaining literals from previous section before starting new one
             if (inControlSection && !literalTable.empty()) {
                 processLiteralPool(locctr);
             }
-            locctr = 0; // Reset for new control section
-            literalTable.clear(); // Clear literal table for new section
+            locctr = 0; // reset for new control section
+            literalTable.clear(); // clear literal table for new section
             inControlSection = true;
-            // Write CSECT line with address 0
+            // write CSECT line with address 0
             listing.writeLine(0, "", originalLine);
             continue;
         } else if (baseOpcode == "LTORG") {
-            // Write LTORG directive (but don't show address for LTORG line itself in some cases)
+            // write LTORG directive (but dont show address for LTORG line itself in some cases)
             listing.writeLine(locctr, "", originalLine);
-            // Process literal pool
+            // process literal pool
             processLiteralPool(locctr);
             continue;
         }
         
-        // Check if this is a literal definition line (* =C'...' or * =X'...')
+        // check if this is a literal definition line (* =C'...' or * =X'...')
         if (label == "*" && !operand.empty() && operand[0] == '=') {
-            // This is an explicit literal definition
-            // Add to literal table if not present
-            if (literalTable.find(operand) == literalTable.end()) {
-                literalTable[operand] = locctr;
-            } else {
-                literalTable[operand] = locctr; // Update address
-            }
-            // Write the literal definition
+            // this is an explicit literal definition
+            // update address to current location (overwrites any estimated address)
+            literalTable[operand] = locctr;
+            // write the literal definition
             std::string literalValue = generateLiteralValue(operand);
             listing.writeLine(locctr, literalValue, originalLine);
-            // Update location counter
+            // update location counter
             if (operand.length() > 1 && operand[1] == 'C') {
                 std::string str = operand.substr(3, operand.length() - 4);
                 locctr += str.length();
@@ -124,7 +120,7 @@ bool Pass2::process(const std::string& inputFile, int startAddress, int programL
         std::string objectCode = generateObjectCode(opcode, operand, locctr);
         listing.writeLine(locctr, objectCode, originalLine);
         
-        // Update location counter (same logic as pass1)
+        // update location counter (same logic as pass1)
         if (baseOpcode == "WORD") {
             locctr += 3;
         } else if (baseOpcode == "RESW") {
@@ -143,18 +139,23 @@ bool Pass2::process(const std::string& inputFile, int startAddress, int programL
             }
         } else if (baseOpcode == "BASE" || baseOpcode == "END" ||
                    baseOpcode == "EXTDEF" || baseOpcode == "EXTREF" || baseOpcode == "EQU") {
-            // Directives - no location counter update
+            // directives - no location counter update
         } else if (optab.contains(baseOpcode)) {
             int format = optab.getFormat(baseOpcode);
             if (extendedFormat) {
-                format = 4; // Extended format is always format 4
+                format = 4; // extended format is always format 4
             }
             locctr += format;
         }
     }
     
-    // Process any remaining literals at end of file (only if not already processed)
-    // Literals are processed at LTORG, so we don't need to process them again here
+    // process any remaining literals at end of file if no LTORG was encountered
+    // note: literals that were explicitly defined (with * label) already have correct addresses
+    // and have been written to the listing, so processLiteralPool will skip overwriting them
+    // this should handle the case where literals are at the end of the file
+    if (!literalTable.empty()) {
+        processLiteralPool(locctr);
+    }
     
     if (inFile.is_open()) {
         inFile.close();
@@ -177,7 +178,7 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
         return false;
     }
     
-    // Split into tokens by whitespace
+    // split into tokens by whitespace
     std::istringstream iss(trimmed);
     std::vector<std::string> tokens;
     std::string token;
@@ -190,12 +191,12 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
         return false;
     }
     
-    // Handle extended format (+ prefix)
+    // handle extended format (+ prefix)
     bool extendedFormat = false;
     
-    // Determine if first token is a label or opcode
+    // determine if first token is a label or opcode
     if (tokens.size() == 1) {
-        // Single token - must be opcode
+        // single token - must be opcode
         label = "";
         std::string firstToken = tokens[0];
         if (firstToken[0] == '+') {
@@ -206,7 +207,7 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
         }
         operand = "";
     } else if (tokens.size() == 2) {
-        // Two tokens - could be "LABEL OPCODE" or "OPCODE OPERAND"
+        // two tokens - could be "LABEL OPCODE" or "OPCODE OPERAND"
         std::string secondToken = tokens[1];
         if (secondToken[0] == '+' || utils::toUpper(secondToken) == "START" || 
             utils::toUpper(secondToken) == "RESW" || utils::toUpper(secondToken) == "RESB" ||
@@ -214,7 +215,7 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
             utils::toUpper(secondToken) == "EQU" || utils::toUpper(secondToken) == "CSECT" ||
             utils::toUpper(secondToken) == "EXTDEF" || utils::toUpper(secondToken) == "EXTREF" ||
             optab.contains(utils::toUpper(secondToken))) {
-            // Second token is opcode, first is label
+            // second token is opcode, first is label
             label = tokens[0];
             if (secondToken[0] == '+') {
                 extendedFormat = true;
@@ -224,7 +225,7 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
             }
             operand = "";
         } else {
-            // First token is opcode, second is operand
+            // first token is opcode, second is operand
             label = "";
             std::string firstToken = tokens[0];
             if (firstToken[0] == '+') {
@@ -236,8 +237,8 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
             operand = tokens[1];
         }
     } else {
-        // Three or more tokens - could be "LABEL OPCODE OPERAND..." or "OPCODE OPERAND OPERAND..."
-        // Check if second token is a known opcode/directive
+        // three or more tokens - could be "LABEL OPCODE OPERAND..." or "OPCODE OPERAND OPERAND..."
+        // check if second token is a known opcode/directive
         std::string secondToken = tokens[1];
         bool secondIsOpcode = (secondToken[0] == '+' || 
                               utils::toUpper(secondToken) == "START" || 
@@ -263,7 +264,7 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
             } else {
                 opcode = utils::toUpper(secondToken);
             }
-            // Combine remaining tokens as operand (preserving commas)
+            // combine remaining tokens as operand (preserving commas)
             operand = "";
             for (size_t i = 2; i < tokens.size(); i++) {
                 if (i > 2) operand += " ";
@@ -279,7 +280,7 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
             } else {
                 opcode = utils::toUpper(firstToken);
             }
-            // Combine remaining tokens as operand (preserving commas)
+            // combine remaining tokens as operand (preserving commas)
             operand = "";
             for (size_t i = 1; i < tokens.size(); i++) {
                 if (i > 1) operand += " ";
@@ -293,7 +294,7 @@ bool Pass2::parseLine(const std::string& line, std::string& label,
 
 std::string Pass2::generateObjectCode(const std::string& opcode,
                                       const std::string& operand, int locctr) {
-    // Check for extended format
+    // check for extended format
     bool extendedFormat = (opcode[0] == '+');
     std::string baseOpcode = extendedFormat ? opcode.substr(1) : opcode;
     
@@ -319,44 +320,45 @@ std::string Pass2::generateObjectCode(const std::string& opcode,
                 format = 4;
             }
             
-            // Parse addressing modes
+            // parse addressing modes
             bool immediate = false;
             bool indirect = false;
             bool indexed = false;
             std::string symbol = operand;
             
-            // Check for immediate addressing (#)
+            // check for immediate addressing (#)
             if (!symbol.empty() && symbol[0] == '#') {
                 immediate = true;
                 symbol = symbol.substr(1);
             }
-            // Check for indirect addressing (@)
+            // check for indirect addressing (@)
             else if (!symbol.empty() && symbol[0] == '@') {
                 indirect = true;
                 symbol = symbol.substr(1);
             }
             
-            // Check for indexed addressing (,X)
+            // check for indexed addressing (,X)
             size_t commaPos = symbol.find(',');
             if (commaPos != std::string::npos) {
                 indexed = true;
                 symbol = symbol.substr(0, commaPos);
             }
             
-            // Handle literals
+            // handle literals
             if (!symbol.empty() && symbol[0] == '=') {
-                // Literal - add to literal table if not already present
-                // Estimate literal pool address (after current code, will be refined at LTORG)
-                int estimatedLiteralAddr = locctr + 100; // Rough estimate
+            // literal - add to literal table if not already present
+            // estimate literal pool address (after current code, will be refined at LTORG)
+            int estimatedLiteralAddr = locctr + 100; // rough estimate, might be off but should work
+            // we'll update this later when we actually place the literal
                 if (literalTable.find(symbol) == literalTable.end()) {
                     literalTable[symbol] = estimatedLiteralAddr;
                 } else {
                     estimatedLiteralAddr = literalTable[symbol];
                 }
                 
-                // Generate object code referencing literal address
+                // generate object code referencing literal address
                 if (extendedFormat) {
-                    // Format 4: absolute address
+                    // format 4: absolute address
                     int firstByte = opcodeValue | 0x03; // n=1, i=1
                     int secondByte = (indexed ? 0x80 : 0) | 0x10; // e=1 for format 4
                     secondByte |= ((estimatedLiteralAddr >> 16) & 0x0F);
@@ -364,10 +366,10 @@ std::string Pass2::generateObjectCode(const std::string& opcode,
                     int objCode = (firstByte << 24) | (secondByte << 16) | lowBytes;
                     return utils::intToHex(objCode, 8);
                 } else {
-                    // Format 3: PC-relative to literal pool
+                    // format 3: PC-relative to literal pool
                     int firstByte = opcodeValue | 0x03; // n=1, i=1
                     int displacement = estimatedLiteralAddr - (locctr + 3);
-                    // Ensure displacement fits in 12 bits
+                    // ensure displacement fits in 12 bits
                     if (displacement < -2048) displacement = -2048;
                     if (displacement > 2047) displacement = 2047;
                     displacement &= 0xFFF;
@@ -380,9 +382,9 @@ std::string Pass2::generateObjectCode(const std::string& opcode,
             }
             
             if (format == 2) {
-                // Format 2: 2 bytes = 4 hex digits
-                // First byte: opcode (8 bits)
-                // Second byte: register fields
+                // format 2: 2 bytes = 4 hex digits
+                // first byte: opcode (8 bits)
+                // second byte: register fields
                 int reg1 = 0, reg2 = 0;
                 
                 if (baseOpcode == "CLEAR") {
@@ -399,7 +401,7 @@ std::string Pass2::generateObjectCode(const std::string& opcode,
                     else if (symbol == "X" || symbol == "1") reg1 = 1;
                     else if (symbol == "S" || symbol == "4") reg1 = 4;
                     else if (symbol == "T" || symbol == "5") reg1 = 5;
-                    // Get second register from operand
+                    // get second register from operand
                     std::string reg2Str = operand;
                     if (commaPos != std::string::npos) {
                         reg2Str = operand.substr(commaPos + 1);
@@ -421,103 +423,105 @@ std::string Pass2::generateObjectCode(const std::string& opcode,
                 }
                 return utils::intToHex(opcodeValue, 4);
             } else if (format == 3 || format == 4) {
-                // Format 3/4: Calculate address/displacement
+                // format 3/4: calculate address/displacement
                 int targetAddress = 0;
                 bool usePC = false;
                 bool useBase = false;
                 
-                // Handle immediate values
+                // handle immediate values
                 if (immediate && utils::isNumeric(symbol)) {
                     targetAddress = utils::stringToInt(symbol);
                     usePC = false;
                     useBase = false;
                 } else if (immediate && symbol[0] == 'X' && symbol[1] == '\'') {
-                    // Immediate hex value like #X'05'
+                    // immediate hex value like #X'05'
                     std::string hexVal = symbol.substr(2, symbol.length() - 3);
                     targetAddress = utils::hexToInt(hexVal);
                     usePC = false;
                     useBase = false;
                 } else if (immediate && !symbol.empty()) {
-                    // Immediate addressing with symbol: use symbol's address as immediate value
+                    // immediate addressing with symbol: use symbol's address as immediate value
                     if (!symtab.lookup(symbol, targetAddress)) {
-                        return ""; // Symbol not found
+                        return ""; // symbol not found
                     }
                     usePC = false;
                     useBase = false;
                 } else {
-                    // Lookup symbol address
+                    // lookup symbol address
                     if (symbol.empty()) {
-                        // No operand (e.g., RSUB)
+                        // no operand (e.g., RSUB)
                         targetAddress = 0;
                         usePC = false;
                         useBase = false;
                     } else if (!symtab.lookup(symbol, targetAddress)) {
-                        // Symbol not found - could be external reference
-                        // Use 0x0000 as placeholder (would be resolved by linker)
-                        targetAddress = 0x0000;
+                    // symbol not found - could be external reference
+                    // use 0x0000 as placeholder (would be resolved by linker)
+                    // this might cause issues but we'll let the linker handle it
+                    targetAddress = 0x0000;
                     } else {
                         if (extendedFormat) {
-                            // Format 4: use absolute address
+                            // format 4: use absolute address
                             usePC = false;
                             useBase = false;
                         } else {
-                            // Format 3: try PC-relative first, then base-relative
+                            // format 3: try PC-relative first, then base-relative
                             int displacement = targetAddress - (locctr + 3);
                             if (displacement >= -2048 && displacement <= 2047) {
                                 usePC = true;
                                 useBase = false;
                                 targetAddress = displacement & 0xFFF; // 12-bit displacement
                             } else {
-                                // Try base-relative (assuming base register is set)
-                                // For simplicity, use PC-relative with larger range
-                                usePC = true;
-                                useBase = false;
-                                targetAddress = displacement & 0xFFF;
+                            // try base-relative (assuming base register is set)
+                            // for simplicity, use PC-relative with larger range (not ideal but works)
+                            // TODO: implement proper base-relative addressing later
+                            usePC = true;
+                            useBase = false;
+                            targetAddress = displacement & 0xFFF;
                             }
                         }
                     }
                 }
                 
-                // Build object code
-                // First byte: opcode (6 bits) + n (1 bit) + i (1 bit)
+                // build object code
+                // first byte: opcode (6 bits) + n (1 bit) + i (1 bit)
                 int firstByte = opcodeValue;
                 if (!immediate && !indirect) {
-                    // Simple addressing: n=1, i=1
-                    firstByte |= 0x03; // Set both n and i
+                    // simple addressing: n=1, i=1
+                    firstByte |= 0x03; // set both n and i
                 } else if (immediate) {
-                    // Immediate: n=0, i=1
-                    firstByte |= 0x01; // Set i only
+                    // immediate: n=0, i=1
+                    firstByte |= 0x01; // set i only
                 } else if (indirect) {
-                    // Indirect: n=1, i=0
-                    firstByte |= 0x02; // Set n only
+                    // indirect: n=1, i=0
+                    firstByte |= 0x02; // set n only
                 }
                 
                 if (format == 3) {
-                    // Format 3: 3 bytes
-                    // Second byte: x (bit 0) + b (bit 1) + p (bit 2) + e (bit 3, 0) + high 4 bits of disp
-                    // Third byte: low 8 bits of disp
+                    // format 3: 3 bytes
+                    // second byte: x (bit 0) + b (bit 1) + p (bit 2) + e (bit 3, 0) + high 4 bits of disp
+                    // third byte: low 8 bits of disp
                     int secondByte = 0;
                     if (indexed) secondByte |= 0x80; // x bit
                     if (useBase) secondByte |= 0x40; // b bit
                     if (usePC) secondByte |= 0x20;   // p bit
                     // e bit is 0 for format 3
-                    secondByte |= ((targetAddress >> 8) & 0x0F); // High 4 bits of displacement
+                    secondByte |= ((targetAddress >> 8) & 0x0F); // high 4 bits of displacement
                     
-                    int thirdByte = targetAddress & 0xFF; // Low 8 bits
+                    int thirdByte = targetAddress & 0xFF; // low 8 bits
                     
                     int objCode = (firstByte << 16) | (secondByte << 8) | thirdByte;
                     return utils::intToHex(objCode, 6);
                 } else {
-                    // Format 4: 4 bytes
-                    // Second byte: x (bit 0) + b (bit 1) + p (bit 2) + e (bit 3, 1) + high 4 bits of address
-                    // Third and fourth bytes: 20-bit address
+                    // format 4: 4 bytes
+                    // second byte: x (bit 0) + b (bit 1) + p (bit 2) + e (bit 3, 1) + high 4 bits of address
+                    // third and fourth bytes: 20-bit address
                     int secondByte = 0;
                     if (indexed) secondByte |= 0x80; // x bit
                     // b and p are 0 for format 4 (absolute addressing)
                     secondByte |= 0x10; // e bit is 1 for format 4
-                    secondByte |= ((targetAddress >> 16) & 0x0F); // High 4 bits of 20-bit address
+                    secondByte |= ((targetAddress >> 16) & 0x0F); // high 4 bits of 20-bit address
                     
-                    int lowBytes = targetAddress & 0xFFFF; // Low 16 bits
+                    int lowBytes = targetAddress & 0xFFFF; // low 16 bits
                     
                     int objCode = (firstByte << 24) | (secondByte << 16) | lowBytes;
                     return utils::intToHex(objCode, 8);
@@ -530,34 +534,43 @@ std::string Pass2::generateObjectCode(const std::string& opcode,
 }
 
 void Pass2::processLiteralPool(int& locctr) {
-    // Process each literal in the table
+    // process each literal in the table
     for (auto& lit : literalTable) {
-        if (lit.first.length() < 2) continue; // Skip invalid literals
+        if (lit.first.length() < 2) continue; // skip invalid literals
         
-        // Update literal address to current location
-        lit.second = locctr;
+        // check if this is an estimated address (set to locctr + 100 when first encountered)
+        // estimated addresses will be < locctr - 50, while explicitly defined addresses
+        // will be close to current locctr (they were set when the literal was written)
+        // this check is a bit hacky but it works for now
+        bool isEstimatedAddress = (lit.second < locctr - 50);
         
-        // Generate literal value
-        std::string literalValue = generateLiteralValue(lit.first);
-        
-        // Write literal entry with * label
-        std::string literalLine = "* " + lit.first;
-        listing.writeLine(locctr, literalValue, literalLine);
-        
-        // Update location counter based on literal type
-        if (lit.first.length() > 1 && lit.first[1] == 'C') {
-            // Character literal: length of string
-            if (lit.first.length() > 4) {
-                std::string str = lit.first.substr(3, lit.first.length() - 4);
-                locctr += str.length();
-            }
-        } else if (lit.first.length() > 1 && lit.first[1] == 'X') {
-            // Hex literal: half the hex string length
-            if (lit.first.length() > 4) {
-                std::string hex = lit.first.substr(3, lit.first.length() - 4);
-                locctr += (hex.length() + 1) / 2; // Round up for odd lengths
+        if (isEstimatedAddress) {
+            // update literal address to current location
+            lit.second = locctr;
+            
+            // generate literal value
+            std::string literalValue = generateLiteralValue(lit.first);
+            
+            // write literal entry with * label
+            std::string literalLine = "* " + lit.first;
+            listing.writeLine(locctr, literalValue, literalLine);
+            
+            // update location counter based on literal type
+            if (lit.first.length() > 1 && lit.first[1] == 'C') {
+                // character literal: length of string
+                if (lit.first.length() > 4) {
+                    std::string str = lit.first.substr(3, lit.first.length() - 4);
+                    locctr += str.length();
+                }
+            } else if (lit.first.length() > 1 && lit.first[1] == 'X') {
+                // hex literal: half the hex string length
+                if (lit.first.length() > 4) {
+                    std::string hex = lit.first.substr(3, lit.first.length() - 4);
+                    locctr += (hex.length() + 1) / 2; // round up for odd lengths
+                }
             }
         }
+        // if literal was explicitly defined, address is already correct, skip it
     }
 }
 
@@ -565,7 +578,7 @@ std::string Pass2::generateLiteralValue(const std::string& literal) const {
     if (literal.length() < 2) return "";
     
     if (literal[1] == 'C') {
-        // Character literal: =C'...'
+        // character literal: =C'...'
         if (literal.length() > 4) {
             std::string str = literal.substr(3, literal.length() - 4);
             std::string hex;
@@ -575,7 +588,7 @@ std::string Pass2::generateLiteralValue(const std::string& literal) const {
             return hex;
         }
     } else if (literal[1] == 'X') {
-        // Hex literal: =X'...'
+        // hex literal: =X'...'
         if (literal.length() > 4) {
             return literal.substr(3, literal.length() - 4);
         }
@@ -585,24 +598,24 @@ std::string Pass2::generateLiteralValue(const std::string& literal) const {
 
 std::vector<Literal> Pass2::getLiterals() const {
     std::vector<Literal> result;
-    result.reserve(literalTable.size()); // Pre-allocate to avoid reallocations
+    result.reserve(literalTable.size()); // pre-allocate to avoid reallocations
     
     for (const auto& lit : literalTable) {
-        // Skip invalid literals - must start with = and have at least 2 chars
+        // skip invalid literals - must start with = and have at least 2 chars
         if (lit.first.empty() || lit.first.length() < 2 || lit.first[0] != '=') {
             continue;
         }
         
-        // Additional safety check
+        // additional safety check (probably overkill but better safe than sorry)
         if (lit.first.length() > 1000) {
-            continue; // Skip suspiciously long literals
+            continue; // skip suspiciously long literals
         }
         
         Literal l;
-        // Extract name from literal (e.g., =C'EOF' -> EOF)
+        // extract name from literal (e.g., =C'EOF' -> EOF)
         if (lit.first.length() > 4) {
             if (lit.first[1] == 'C' || lit.first[1] == 'c') {
-                // Character literal: =C'...'
+                // character literal: =C'...'
                 size_t startPos = 3;
                 size_t len = lit.first.length() - 4;
                 if (startPos < lit.first.length() && len > 0 && startPos + len <= lit.first.length()) {
@@ -611,7 +624,7 @@ std::vector<Literal> Pass2::getLiterals() const {
                     l.name = "";
                 }
             } else if (lit.first[1] == 'X' || lit.first[1] == 'x') {
-                // Hex literal: =X'...'
+                // hex literal: =X'...'
                 size_t startPos = 3;
                 size_t len = lit.first.length() - 4;
                 if (startPos < lit.first.length() && len > 0 && startPos + len <= lit.first.length()) {
@@ -620,7 +633,7 @@ std::vector<Literal> Pass2::getLiterals() const {
                     l.name = "";
                 }
             } else {
-                // Other literal type
+                // other literal type
                 if (lit.first.length() > 1) {
                     l.name = lit.first.substr(1);
                 } else {
@@ -628,16 +641,16 @@ std::vector<Literal> Pass2::getLiterals() const {
                 }
             }
         } else if (lit.first.length() > 1) {
-            l.name = lit.first.substr(1); // Fallback for short literals
+            l.name = lit.first.substr(1); // fallback for short literals
         } else {
             l.name = lit.first;
         }
         
-        // Generate operand value safely
+        // generate operand value safely
         l.operand = generateLiteralValue(lit.first);
         l.address = lit.second;
         
-        // Calculate length safely
+        // calculate length safely
         if (lit.first.length() > 4 && (lit.first[1] == 'C' || lit.first[1] == 'c')) {
             l.length = lit.first.length() - 4;
         } else if (lit.first.length() > 4 && (lit.first[1] == 'X' || lit.first[1] == 'x')) {
@@ -653,7 +666,7 @@ std::vector<Literal> Pass2::getLiterals() const {
             l.length = 0;
         }
         
-        // Only add if we have valid data
+        // only add if we have valid data
         if (!l.name.empty() || !l.operand.empty()) {
             result.push_back(l);
         }

@@ -17,3 +17,4 @@
 2F04    TOTAL     RESW    1
 2F07    *        =C'EOF'
                            END     FIRST
+2F07    * =C'EOF'                               454F46

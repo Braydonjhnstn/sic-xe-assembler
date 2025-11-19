@@ -17,8 +17,8 @@ OpTable::~OpTable() {
 }
 
 void OpTable::initializeOpcodes() {
-    // SIC/XE instruction set (format 2/3/4)
-    // Format 3 instructions
+    // initialize SIC/XE instruction set opcodes and formats
+    // format 3 instructions (3 bytes) - most common format
     opcodes["ADD"] = 0x18;
     opcodes["AND"] = 0x40;
     opcodes["COMP"] = 0x28;
@@ -47,12 +47,13 @@ void OpTable::initializeOpcodes() {
     opcodes["TIX"] = 0x2C;
     opcodes["WD"] = 0xDC;
     
-    // Format 2 instructions
+    // format 2 instructions (2 bytes) - register-to-register operations
     opcodes["CLEAR"] = 0xB4;
     opcodes["COMPR"] = 0xA0;
     opcodes["TIXR"] = 0xB8;
     
-    // Format for each instruction (2 = format 2, 3 = format 3, 4 = format 4)
+    // set instruction formats (2 = format 2, 3 = format 3)
+    // note: format 4 is determined by + prefix, not stored in table
     formats["ADD"] = 3;
     formats["AND"] = 3;
     formats["COMP"] = 3;

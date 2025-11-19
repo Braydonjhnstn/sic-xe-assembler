@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+// Utility functions for string manipulation and number conversion
 namespace utils {
     std::string trim(const std::string& str);
     std::vector<std::string> split(const std::string& str, char delimiter);
@@ -20,7 +21,7 @@ namespace utils {
     std::string intToHex(int value, int width = 0);
     int hexToInt(const std::string& hex);
     std::string toUpper(const std::string& str);
-    bool isValidSymbol(const std::string& symbol);
+    bool isValidSymbol(const std::string& symbol); // 1-6 chars, starts with letter, alphanumeric
 }
 
 #endif // UTILS_HPP

@@ -16,6 +16,7 @@
 #include "optab.hpp"
 #include "listing.hpp"
 
+// Second pass: generates object code and listing file
 class Pass2 {
 public:
     Pass2(SymbolTable& symtab, OpTable& optab, ListingGenerator& listing);

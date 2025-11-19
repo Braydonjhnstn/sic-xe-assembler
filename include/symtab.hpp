@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
+// Structure for literal pool entries
 struct Literal {
     std::string name;
     std::string operand;
@@ -20,6 +21,7 @@ struct Literal {
     int length;
 };
 
+// Symbol table for storing labels and addresses
 class SymbolTable {
 public:
     SymbolTable();

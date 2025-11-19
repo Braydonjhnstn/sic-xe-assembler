@@ -15,6 +15,7 @@
 #include "optab.hpp"
 #include "listing.hpp"
 
+// Main orchestrator for SIC/XE two-pass assembler
 class Assembler {
 public:
     Assembler();

@@ -19,10 +19,9 @@
 002D    RETADR  RESW    1
 0030    LENGTH  RESW    1
 0033            LTORG
-0033    * =C'EOF'                               454F46
-0036    BUFFER  RESB    4096
-1036    BUFEND  EQU     *
-1036    MAXLEN  EQU     BUFEND-BUFFER
+0033    BUFFER  RESB    4096
+1033    BUFEND  EQU     *
+1033    MAXLEN  EQU     BUFEND-BUFFER
                          END     FIRST
 0000    RDREC   CSECT
 0000            EXTREF  BUFFER, LENGTH, BUFEND

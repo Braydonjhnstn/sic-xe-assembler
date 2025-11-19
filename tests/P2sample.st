@@ -12,4 +12,4 @@ SUM     000000  002F07
 Literal Table 
 Name  Operand   Address  Length:
 --------------------------------
-EOF  454F46    0081     3
+EOF  454F46    2F07     3

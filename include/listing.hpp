@@ -14,6 +14,7 @@
 #include <fstream>
 #include <vector>
 
+// Generates listing file with addresses, object code, and source lines
 class ListingGenerator {
 public:
     ListingGenerator();
@@ -22,7 +23,7 @@ public:
     bool open(const std::string& filename);
     void close();
     void writeLine(int address, const std::string& objectCode,
-                   const std::string& sourceLine);
+                   const std::string& sourceLine); // address = -1 for no address
     void writeHeader(const std::string& programName, int startAddress,
                     int programLength);
     void writeError(const std::string& error);
