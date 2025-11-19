@@ -1,15 +1,22 @@
-BUFEND    1033
-BUFFER00000033
-CLOOP000000006
-COPY0000000000
-ENDFIL0000001A
-EXIT0000000021
-FIRST000000000
-INPUT000000028
-LENGTH00000030
-MAXLEN00001033
-RDREC000001033
-RETADR0000002D
-RLOOP00000000A
-WLOOP000000006
-WRREC00000002C
+CSect   Symbol  Value   LENGTH  Flags:
+--------------------------------------
+COPY    000000  00001B
+        BUFEND  001033          R
+        BUFFER  000033          R
+        CLOOP   000006          R
+        ENDFIL  00001A          R
+        EXIT    000021          R
+        FIRST   000000          R
+        INPUT   000028          R
+        LENGTH  000030          R
+        MAXLEN  001033          R
+        RDREC   001033          R
+        RETADR  00002D          R
+        RLOOP   00000A          R
+        WLOOP   000006          R
+        WRREC   00002C          R
+
+Literal Table 
+Name  Operand   Address  Length:
+--------------------------------
+X05  05        006A     1

@@ -17,12 +17,24 @@ int main(int argc, char* argv[]) {
     
     bool allSuccess = true;
     for (const auto& inputFile : inputFiles) {
-        Assembler assembler;
-        if (!assembler.assemble(inputFile)) {
-            std::cerr << "Assembly failed for: " << inputFile << std::endl;
+        try {
+            Assembler assembler;
+            if (!assembler.assemble(inputFile)) {
+                std::cerr << "Assembly failed for: " << inputFile << std::endl;
+                allSuccess = false;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Exception during assembly: " << e.what() << std::endl;
+            allSuccess = false;
+        } catch (...) {
+            std::cerr << "Unknown exception during assembly" << std::endl;
             allSuccess = false;
         }
     }
+    
+    // Force cleanup before exit
+    std::cout.flush();
+    std::cerr.flush();
     
     return allSuccess ? 0 : 1;
 }

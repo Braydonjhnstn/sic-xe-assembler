@@ -169,7 +169,20 @@ bool Pass1::parseLine(const std::string& line, std::string& label,
 
 void Pass1::processInstruction(const std::string& label, const std::string& opcode,
                                const std::string& operand, int& locctr) {
-    if (!label.empty()) {
+    // Handle literal definition (* =C'...' or * =X'...')
+    if (label == "*" && !operand.empty() && operand[0] == '=') {
+        // This is a literal definition - just update location counter
+        if (operand.length() > 1 && operand[1] == 'C') {
+            std::string str = operand.substr(3, operand.length() - 4);
+            locctr += str.length();
+        } else if (operand.length() > 1 && operand[1] == 'X') {
+            std::string hex = operand.substr(3, operand.length() - 4);
+            locctr += (hex.length() + 1) / 2;
+        }
+        return; // Don't process as regular instruction
+    }
+    
+    if (!label.empty() && label != "*") {
         if (symtab.contains(label)) {
             std::cerr << "Error: Duplicate symbol " << label << std::endl;
         } else {
@@ -226,7 +239,8 @@ void Pass1::processInstruction(const std::string& label, const std::string& opco
             format = 4; // Extended format is always format 4
         }
         locctr += format;
-    } else {
+    } else if (baseOpcode != "*") {
+        // * is a special label, not an opcode
         std::cerr << "Error: Invalid opcode " << baseOpcode << std::endl;
     }
 }

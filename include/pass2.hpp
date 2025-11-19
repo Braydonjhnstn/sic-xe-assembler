@@ -13,6 +13,7 @@ public:
     Pass2(SymbolTable& symtab, OpTable& optab, ListingGenerator& listing);
     
     bool process(const std::string& inputFile, int startAddress, int programLength);
+    std::vector<Literal> getLiterals() const;
     
 private:
     SymbolTable& symtab;
@@ -25,7 +26,7 @@ private:
     std::string generateObjectCode(const std::string& opcode,
                                    const std::string& operand, int locctr);
     void processLiteralPool(int& locctr);
-    std::string generateLiteralValue(const std::string& literal);
+    std::string generateLiteralValue(const std::string& literal) const;
 };
 
 #endif // PASS2_HPP

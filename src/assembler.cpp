@@ -1,7 +1,11 @@
 #include "assembler.hpp"
 #include "pass1.hpp"
 #include "pass2.hpp"
+#include "symtab.hpp"
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 Assembler::Assembler() {
 }
@@ -24,8 +28,14 @@ bool Assembler::assemble(const std::string& inputFile) {
     }
     
     // Write symbol table file
-    if (!writeSymbolTable(inputFile)) {
-        std::cerr << "Warning: Could not write symbol table file" << std::endl;
+    try {
+        if (!writeSymbolTable(inputFile)) {
+            std::cerr << "Warning: Could not write symbol table file" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Warning: Exception writing symbol table: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "Warning: Unknown error writing symbol table" << std::endl;
     }
     
     return true;
@@ -47,7 +57,35 @@ bool Assembler::pass2(const std::string& inputFile) {
         return false;
     }
     Pass2 pass2Processor(symtab, optab, listing);
-    return pass2Processor.process(inputFile, startAddress, programLength);
+    bool result = pass2Processor.process(inputFile, startAddress, programLength);
+    
+    // Store literals for symbol table output (call before pass2Processor is destroyed)
+    // Clear first to avoid any issues
+    pass2Literals.clear();
+    
+    // Only get literals if processing was successful
+    if (result) {
+        // Get literals in a safe way
+        try {
+            const std::vector<Literal>& literals = pass2Processor.getLiterals();
+            // Use reserve and push_back to avoid potential copy issues
+            pass2Literals.reserve(literals.size());
+            for (const auto& lit : literals) {
+                pass2Literals.push_back(lit);
+            }
+        } catch (const std::bad_alloc& e) {
+            // Memory allocation error
+            pass2Literals.clear();
+        } catch (const std::exception& e) {
+            // Other exception
+            pass2Literals.clear();
+        } catch (...) {
+            // Catch any other exception
+            pass2Literals.clear();
+        }
+    }
+    
+    return result;
 }
 
 bool Assembler::writeSymbolTable(const std::string& inputFile) {
@@ -58,6 +96,29 @@ bool Assembler::writeSymbolTable(const std::string& inputFile) {
     }
     symtabFile += ".st";
     
-    return symtab.writeToFile(symtabFile);
+    // Get program name from first line
+    std::ifstream file(inputFile);
+    std::string programName = "PROG";
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            std::string trimmed = line;
+            while (!trimmed.empty() && (trimmed[0] == ' ' || trimmed[0] == '\t')) {
+                trimmed = trimmed.substr(1);
+            }
+            if (!trimmed.empty() && trimmed[0] != '.') {
+                std::istringstream iss(trimmed);
+                std::string label, opcode;
+                iss >> label >> opcode;
+                if (opcode == "START") {
+                    programName = label.empty() ? "PROG" : label;
+                    break;
+                }
+            }
+        }
+        file.close();
+    }
+    
+    return symtab.writeToFile(symtabFile, programName, programLength, pass2Literals);
 }
 

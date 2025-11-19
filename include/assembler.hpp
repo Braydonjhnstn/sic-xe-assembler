@@ -20,6 +20,7 @@ private:
     ListingGenerator listing;
     int startAddress;
     int programLength;
+    std::vector<Literal> pass2Literals;
     
     bool pass1(const std::string& inputFile);
     bool pass2(const std::string& inputFile);

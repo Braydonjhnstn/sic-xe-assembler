@@ -1,5 +1,6 @@
 #include "pass2.hpp"
 #include "utils.hpp"
+#include "symtab.hpp"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -46,20 +47,22 @@ bool Pass2::process(const std::string& inputFile, int startAddress, int programL
         if (!parseLine(line, label, opcode, operand)) {
             std::string trimmed = utils::trim(line);
             if (!trimmed.empty() && trimmed[0] == '.') {
-                listing.writeLine(0, "", originalLine);
+                listing.writeLine(-1, "", originalLine); // -1 means no address for comments
             }
             continue;
         }
         
         if (firstLine && opcode == "START") {
             programName = label.empty() ? "PROG" : label;
-            listing.writeHeader(programName, startAddress, programLength);
+            // Write START line with address
+            listing.writeLine(startAddress, "", originalLine);
             firstLine = false;
             continue;
         }
         
         if (opcode == "END") {
-            listing.writeLine(0, "", originalLine);
+            // Write END line with no address
+            listing.writeLine(-1, "", originalLine); // -1 means no address
             // Don't break - continue processing other control sections
             continue;
         }
@@ -80,10 +83,33 @@ bool Pass2::process(const std::string& inputFile, int startAddress, int programL
             listing.writeLine(0, "", originalLine);
             continue;
         } else if (baseOpcode == "LTORG") {
-            // Write LTORG directive
+            // Write LTORG directive (but don't show address for LTORG line itself in some cases)
             listing.writeLine(locctr, "", originalLine);
             // Process literal pool
             processLiteralPool(locctr);
+            continue;
+        }
+        
+        // Check if this is a literal definition line (* =C'...' or * =X'...')
+        if (label == "*" && !operand.empty() && operand[0] == '=') {
+            // This is an explicit literal definition
+            // Add to literal table if not present
+            if (literalTable.find(operand) == literalTable.end()) {
+                literalTable[operand] = locctr;
+            } else {
+                literalTable[operand] = locctr; // Update address
+            }
+            // Write the literal definition
+            std::string literalValue = generateLiteralValue(operand);
+            listing.writeLine(locctr, literalValue, originalLine);
+            // Update location counter
+            if (operand.length() > 1 && operand[1] == 'C') {
+                std::string str = operand.substr(3, operand.length() - 4);
+                locctr += str.length();
+            } else if (operand.length() > 1 && operand[1] == 'X') {
+                std::string hex = operand.substr(3, operand.length() - 4);
+                locctr += (hex.length() + 1) / 2;
+            }
             continue;
         }
         
@@ -119,13 +145,20 @@ bool Pass2::process(const std::string& inputFile, int startAddress, int programL
         }
     }
     
-    // Process any remaining literals at end of file
-    if (!literalTable.empty()) {
-        processLiteralPool(locctr);
+    // Process any remaining literals at end of file (only if not already processed)
+    // Literals are processed at LTORG, so we don't need to process them again here
+    
+    if (inFile.is_open()) {
+        inFile.close();
     }
     
-    inFile.close();
-    listing.close();
+    // Close listing file safely
+    try {
+        listing.close();
+    } catch (...) {
+        // Ignore errors during close
+    }
+    
     return true;
 }
 
@@ -520,7 +553,7 @@ void Pass2::processLiteralPool(int& locctr) {
     }
 }
 
-std::string Pass2::generateLiteralValue(const std::string& literal) {
+std::string Pass2::generateLiteralValue(const std::string& literal) const {
     if (literal.length() < 2) return "";
     
     if (literal[1] == 'C') {
@@ -540,6 +573,84 @@ std::string Pass2::generateLiteralValue(const std::string& literal) {
         }
     }
     return "";
+}
+
+std::vector<Literal> Pass2::getLiterals() const {
+    std::vector<Literal> result;
+    result.reserve(literalTable.size()); // Pre-allocate to avoid reallocations
+    
+    for (const auto& lit : literalTable) {
+        // Skip invalid literals - must start with = and have at least 2 chars
+        if (lit.first.empty() || lit.first.length() < 2 || lit.first[0] != '=') {
+            continue;
+        }
+        
+        // Additional safety check
+        if (lit.first.length() > 1000) {
+            continue; // Skip suspiciously long literals
+        }
+        
+        Literal l;
+        // Extract name from literal (e.g., =C'EOF' -> EOF)
+        if (lit.first.length() > 4) {
+            if (lit.first[1] == 'C' || lit.first[1] == 'c') {
+                // Character literal: =C'...'
+                size_t startPos = 3;
+                size_t len = lit.first.length() - 4;
+                if (startPos < lit.first.length() && len > 0 && startPos + len <= lit.first.length()) {
+                    l.name = lit.first.substr(startPos, len);
+                } else {
+                    l.name = "";
+                }
+            } else if (lit.first[1] == 'X' || lit.first[1] == 'x') {
+                // Hex literal: =X'...'
+                size_t startPos = 3;
+                size_t len = lit.first.length() - 4;
+                if (startPos < lit.first.length() && len > 0 && startPos + len <= lit.first.length()) {
+                    l.name = "X" + lit.first.substr(startPos, len);
+                } else {
+                    l.name = "";
+                }
+            } else {
+                // Other literal type
+                if (lit.first.length() > 1) {
+                    l.name = lit.first.substr(1);
+                } else {
+                    l.name = lit.first;
+                }
+            }
+        } else if (lit.first.length() > 1) {
+            l.name = lit.first.substr(1); // Fallback for short literals
+        } else {
+            l.name = lit.first;
+        }
+        
+        // Generate operand value safely
+        l.operand = generateLiteralValue(lit.first);
+        l.address = lit.second;
+        
+        // Calculate length safely
+        if (lit.first.length() > 4 && (lit.first[1] == 'C' || lit.first[1] == 'c')) {
+            l.length = lit.first.length() - 4;
+        } else if (lit.first.length() > 4 && (lit.first[1] == 'X' || lit.first[1] == 'x')) {
+            size_t startPos = 3;
+            size_t len = lit.first.length() - 4;
+            if (startPos < lit.first.length() && len > 0 && startPos + len <= lit.first.length()) {
+                std::string hex = lit.first.substr(startPos, len);
+                l.length = (hex.length() + 1) / 2;
+            } else {
+                l.length = 0;
+            }
+        } else {
+            l.length = 0;
+        }
+        
+        // Only add if we have valid data
+        if (!l.name.empty() || !l.operand.empty()) {
+            result.push_back(l);
+        }
+    }
+    return result;
 }
 
 
