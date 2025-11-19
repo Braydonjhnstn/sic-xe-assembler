@@ -1,6 +1,6 @@
 //
-// Name: Braydon Johnston REDid: 131049942
-// Name: Reinaldo Roldan  REDid: 825760540
+// Name: Braydon Johnston REDid: 131049942 Edoras: cssc2115
+// Name: Reinaldo Roldan  REDid: 825760540 Edoras: cssc2131
 //
 
 #include <iostream>
