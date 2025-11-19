@@ -1,6 +1,9 @@
 ##
 ## Name: Braydon Johnston REDid: 131049942
 ## Name: Reinaldo Roldan  REDid: 825760540
+## Cs530-03-Fall2025
+## Assignment 2 SIC/XE Assembler
+## Makefile
 ##
 
 CXX = g++

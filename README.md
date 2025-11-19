@@ -1,6 +1,9 @@
 ##
 ## Name: Braydon Johnston REDid: 131049942 Class Acc: cssc2115
 ## Name: Reinaldo Roldan  REDid: 825760540 Class Acc: cssc2131
+## Cs530-03-Fall2025
+## Assignment 2 SIC/XE Assembler 
+## README.md
 ##
 
 
