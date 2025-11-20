@@ -1,0 +1,29 @@
+        START   1000
+MAIN    LDX     ZERO
+        LDA     ARRAY
+        STA     MAX
+        LDX     XPLUS1
+LOOP    LDA     ARRAY,X
+        COMP    MAX
+        JGT     UPDATE
+        J       NEXT
+UPDATE  LDA     ARRAY,X
+        STA     MAX
+NEXT    LDX     XPLUS1
+        COMP    SIZE
+        JLT     LOOP
+        RSUB
+
+ZERO    WORD    0
+XPLUS1  WORD    3
+SIZE    WORD    5
+MAX     WORD    0
+
+ARRAY   WORD    9
+        WORD    3
+        WORD    14
+        WORD    7
+        WORD    5
+
+        END     MAIN
+
