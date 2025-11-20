@@ -15,7 +15,7 @@
 -symtab.hpp
 -utils.hpp
 # src folder
-assembler.cpp
+-assembler.cpp
 -listing.cpp
 -optab.cpp
 -pass1.cpp
