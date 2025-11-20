@@ -112,7 +112,7 @@ bool Assembler::writeSymbolTable(const std::string& inputFile) {
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
-            // trim leading whitespace to find first non-comment line
+            // go through whitespace to find first non-comment line
             std::string trimmed = line;
             while (!trimmed.empty() && (trimmed[0] == ' ' || trimmed[0] == '\t')) {
                 trimmed = trimmed.substr(1);
